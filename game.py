@@ -48,23 +48,24 @@ def executeCmd(cmd):
     cmd_parts = cmd.split(";")
 
     if (len(cmd_parts) > 1 and len(cmd_parts[1].strip()) > 0):
-        print("Message: %s" % cmd_parts[1])
-    cmd = cmd_parts[0]
+        print("<< %s" % cmd_parts[1].strip())
+    cmd = cmd_parts[0].strip()
     if (cmd[0:3] == "?r$"):
+        print("DEBUG: Play Video - %s"%cmd)
         play_video(int(cmd[3:]))
 
     elif (cmd[0:2] == "?j"):
+        print("DEBUG: Play Video - %s"%cmd)
         play_video(int(cmd[2:]))
         return SKIP
     else:
-        print("Unsupported command: %s" % cmd)
+        print("WARNING: Unsupported command - %s" % cmd)
 
     return CONTINUE
 
 
 def playSequence(sequence):
-    cmds = sequence.split(">")
-    print(cmds)
+    cmds = sequence.strip().split(">")
     for cmd in cmds:
         cmd = cmd.strip()
         if (len(cmd) > 0):
@@ -93,6 +94,7 @@ def runExchange(exchange):
             choice_idx = int(inputstr)-1
 
     choice_str = list(options.keys())[choice_idx]
+    print(">> %s"%choice_str[7:])
     audio_idx = choice_str[3:7]
     play_audio(int(audio_idx))
 
@@ -118,7 +120,6 @@ with open(folder + "STEEL.EXE", 'rb') as fin:
     for scene in scenes:
         if (isinstance(scene, str) and scene.startswith("sequence")):
             skipExchange = False
-            print(scene)
             playSequence(scene[8:])
         elif isinstance(scene, str) and scene.endswith('EXCHANGE'):
             if not skipExchange:

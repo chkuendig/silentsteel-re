@@ -71,9 +71,10 @@ def play_video(idx):
         end = part["end"]
         with open(file, 'rb') as fin:
             fin.seek(start)
-            # for speedup; '-vf','setpts=0.25*PTS','-af','atempo=4',
-            run(['ffplay', '-hide_banner', '-vf', 'scale=-1:480', '-loglevel',
-                'warning', '-autoexit', '-'], input=fin.read(end - start))
+    
+            run(['ffplay', '-hide_banner', '-vf', 'scale=-1:480', 
+                 #'-vf','setpts=0.25*PTS','-af','atempo=4',        # for speedup; 
+                '-loglevel','warning', '-autoexit', '-'], input=fin.read(end - start))
     else:
         print("WARNING: Video not found %i" % idx)
     return
