@@ -1,0 +1,2 @@
+nefile @ git+https://github.com/npjg/nefile@710813a06e98db6f8949b2ecb8f1fcec217dd702
+self_documenting_struct @ git+https://github.com/npjg/self_documenting_struct@9ef34d6a2a11f5edc102bae2e99d63368631a450
