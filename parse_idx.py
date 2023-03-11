@@ -10,7 +10,7 @@ def parseIdx(filename):
         data = in_file.read(16)
         format = data[0:4].decode("ascii")
         length = int.from_bytes(data[12:14], "little")
-        print("Format: %s, Length: %i"%(format,length))
+        print("Format: %s, Max Index: %i"%(format,length))
         print("Full Header: %s"%data.hex())
         print("----------------------")
         while True:
@@ -18,7 +18,7 @@ def parseIdx(filename):
             if len(idx) == 0:                # breaks loop once no more binary data is read
                 break
             offset = struct.unpack( 'I',in_file.read(4))[0]
-            print("%i: %i"%(int.from_bytes(idx, "little"),offset))               # I also like it all in caps. 
+            print("%i: %i"%(int.from_bytes(idx, "little"),offset))             
             idx = int.from_bytes(idx, "little")
             if(idx > 0):
                 parts[idx]={}
@@ -26,6 +26,7 @@ def parseIdx(filename):
             if(lastIdx > 0):
                 parts[lastIdx]["end"] = offset
             lastIdx=idx
+        print("Parts found: i: %s len:%s" % (idx, len(parts)))
         return parts
 
 
@@ -34,8 +35,8 @@ video_parts = parseIdx("/Volumes/Untitled/VIDEO1.IDX")
 
 
 
-sound_parts = parseIdx("/Volumes/Untitled/SOUNDS1.IDX")
-
 print(video_parts)
 print("-----")
+sound_parts = parseIdx("/Volumes/Untitled/SOUNDS1.IDX")
+
 print(sound_parts)
