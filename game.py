@@ -1,5 +1,6 @@
 import json
 import sys
+import nefile
 import random
 from play_idx import play_audio, play_video
 SKIP = -1
@@ -21,17 +22,16 @@ class bcolors:
 folder = "/Volumes/Untitled/"
 
 
-def parse(data):
+def split_lines(data):
     parts = []
     string = ""
     while (len(data) > 0):
-        byte = data.pop(0)
-        char = chr(byte)
+        char = data.pop(0)
 
         if (char == "{"):
             if (len(string.strip()) > 0):
                 parts.append(string.strip())
-            parts.append(parse(data))
+            parts.append(split_lines(data))
             string = ""
         elif (char == "}"):
             if (len(string.strip()) > 0):
@@ -44,32 +44,32 @@ def parse(data):
     return parts
 
 
-def executeCmd(cmd):
-    cmd_parts = cmd.split(";")
+def executeInstruction(instruction):
+    instruction_parts = instruction.split(";")
 
-    if (len(cmd_parts) > 1 and len(cmd_parts[1].strip()) > 0):
-        print("<< %s" % cmd_parts[1].strip())
-    cmd = cmd_parts[0].strip()
-    if (cmd[0:3] == "?r$"):
-        print("DEBUG: Play Video - %s"%cmd)
-        play_video(int(cmd[3:]))
+    if (len(instruction_parts) > 1 and len(instruction_parts[1].strip()) > 0):
+        print("<< %s" % instruction_parts[1].strip())
+    instruction = instruction_parts[0].strip()
+    if (instruction[0:3] == "?r$"):
+        print("DEBUG: Play Video - %s" % instruction)
+        play_video(int(instruction[3:]))
 
-    elif (cmd[0:2] == "?j"):
-        print("DEBUG: Play Video - %s"%cmd)
-        play_video(int(cmd[2:]))
+    elif (instruction[0:2] == "?j"):
+        print("DEBUG: Play Video - %s" % instruction)
+        play_video(int(instruction[2:]))
         return SKIP
     else:
-        print("WARNING: Unsupported command - %s" % cmd)
+        print("WARNING: Unsupported command - %s" % instruction)
 
     return CONTINUE
 
 
 def playSequence(sequence):
-    cmds = sequence.strip().split(">")
-    for cmd in cmds:
-        cmd = cmd.strip()
-        if (len(cmd) > 0):
-            ret = executeCmd(cmd)
+    instructions = sequence.strip().split(">")
+    for instruction in instructions:
+        instruction = instruction.strip()
+        if (len(instruction) > 0):
+            ret = executeInstruction(instruction)
             if (ret == SKIP):
                 return
 
@@ -86,7 +86,7 @@ def runExchange(exchange):
         else:
             print("ASSSD %s" % line)
     for idx, key in enumerate(options.keys()):
-        print("%i. %s" % (idx+1, key[7:]))
+        print("Keys: %i. %s" % (idx+1, key[7:]))
     choice_idx = -1
     while (choice_idx < 0 or choice_idx > 2):
         inputstr = input("Your Choice:")
@@ -94,30 +94,26 @@ def runExchange(exchange):
             choice_idx = int(inputstr)-1
 
     choice_str = list(options.keys())[choice_idx]
-    print(">> %s"%choice_str[7:])
+    print(">> %s" % choice_str[7:])
     audio_idx = choice_str[3:7]
     play_audio(int(audio_idx))
 
     result_str = random.choice(options[choice_str])
-    cmds = result_str.split(">")
-    for cmd in cmds:
-        cmd = cmd.strip()
-        if (len(cmd) > 0):
-            ret = executeCmd(cmd)
+    instructions = result_str.split(">")
+    for instruction in instructions:
+        instruction = instruction.strip()
+        if (len(instruction) > 0):
+            ret = executeInstruction(instruction)
             if (ret == SKIP):
                 return SKIP
 
 
-with open(folder + "STEEL.EXE", 'rb') as fin:
-    fin.seek(93805)
-    data = fin.read(330130-93805)
-    scenes = parse(bytearray(data))
+def playResource(resource):
+    lines = split_lines(list(resource))
     exchange = -1
     skipExchange = False
     skip = 0
-    if (len(sys.argv) >= 2 and sys.argv[1].isdigit()):
-        scenes = scenes[int(sys.argv[1]):]
-    for scene in scenes:
+    for scene in lines:
         if (isinstance(scene, str) and scene.startswith("sequence")):
             skipExchange = False
             playSequence(scene[8:])
@@ -135,3 +131,17 @@ with open(folder + "STEEL.EXE", 'rb') as fin:
         elif not skipExchange:
             print(bcolors.BOLD+"UNSUPPORTED SCENE: " +
                   bcolors.OKBLUE+json.dumps(scene) + bcolors.ENDC)
+
+steel = nefile.NE('/Volumes/Untitled/STEEL.EXE')
+data_resources = steel.resource_table.resources["DATA"]
+scenes = {}
+for resource_id, resource in data_resources.items():
+    data_str = resource.data.read().decode(
+        "ascii").rstrip("\x1a \x00")  # there's padding
+    scenes[resource_id] = data_str
+
+if (len(sys.argv) >= 2 and sys.argv[1].isdigit()):
+    scenes = scenes[int(sys.argv[1]):]  # jump forward to this scene/resource
+for resource_id in scenes:
+    scene = scenes[resource_id]
+    jump = playResource(scene)

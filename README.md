@@ -21,7 +21,7 @@ At the moment this only supports the promotional disc available at the [Internet
 
 ## Data Formats:
 
-### Game Executable
+### Game Executable Resources
 
 `STEEL.EXE` is the main game executable in 16 bit [New Executable](https://en.wikipedia.org/wiki/New_Executable) format and contains all scripts as resources. This format is very well documented and there's multiple portable parsers for it. I used the [radare2 source code](https://github.com/radareorg/radare2/blob/master/libr/bin/format/ne) and [OSDEV.org Wiki](https://wiki.osdev.org/NE) for my research.
 
@@ -51,8 +51,70 @@ Thankfully, the format is not too complicated, so it's pretty straightforward to
 In the end and way too late, I discoverd the amazing [nefile](https://github.com/npjg/nefile) which does this all for us, and which is what I ended up using for the player.
 
 ### Game Scripts
+Once extracted, the game scripts follow a simple syntax. To explain, lets go through the start of the promo disc:
 
-TBC
+**Resource 1001:**
+```
+{
+    sequence > ?v18 > ?r$1001; > ?j1002 
+}
+```
+This means that in sequence, three things will happen:
+  - `?v18`: Unknown meaning
+  - `?r$1001;`: Play video 1001 (if there's text after `;` print it out as subtitles). 
+  - `?j1002`: Jump to resource 1002 
+
+
+**Resource 1002:**
+```
+{
+    sequence > ?&9999 > ?r$1002; 
+}
+```
+  - `?&9999`: Unknown meaning (video maybe a marker for savegames/checkpoint?)
+  - `?r$1002;`: Play video 1002, again no subtitles 
+
+```
+ 1 EXCHANGE {
+    + !0001This is the Captain. {
+       > ?r$1003;Captain, sorry to wake you. We just received an urgent message from COMSUBLANT. 
+   }
+   [...]
+    = !0002It can't be 0630 yet. XO, what's up? {
+       > ?r$1004;Morning, Skipper. We just received an urgent message from COMSUBLANT. 
+   }
+   [...]
+    - !0003This better be important. {
+       > ?r$1005;Good morning, Sir. We just received urgent traffic from COMSUBLANT. 
+   }
+   [...]
+}
+```
+This is the first time the player gets to make a decision:
+- `1 EXCHANGE` marks the start of an exchange (player controleld dialogue).   
+  - Exchanges are played sequentually, but can be skipped with a jump instruction (see below).
+  - The player always has three dialoge lines to choose from, encoded as strings starting with `+`,`=` or `-` follow by an exclamation mark and a four digit numer indicating the index of the segement for the voice track followed by the dialogue line as text.
+  - After each dialoge line, three possible consequences are lined up. Encoding is the same as the sequence discussed initially. In this case it's a video (`r$1003`,`r$1004` or `r$1003`) with subtitles, but it can also be multiple segments (separated by `>`) and include jumps (in which case the exchange is over). 
+  - Often all three consequences are the same (which is why i removed them from the snippet above), but sometimes there's different ones which presumably get picked randomly.
+
+```
+ 2 EXCHANGE {
+    + !0004I'll be right down. {
+       > ?r$1012;Morning, Captain. Morning, Skipper... > ?j2001 
+   }
+   [...]
+}
+``` 
+- This consequence has a jump (`?j2001) meaning that this choice ends the exchange and the game continues at resource 2001.
+
+#### Other instructions
+Later in the script, a few more unknown instructions are used, it's unclear what the following instructions mean:
+- `?v` - this actually only appears once right at the beginning of the game (`?v18` see above) 
+- `?s0100` - actually no other `?s` instruction is used in the promo disc. appears 15 times.
+- `?&` - appears many (61) times in the promo disc, nothing actually seems to happen in the original game at these points in the game - maybe it's a savegame state?
+- `?*` - appears 45 times, could also be an alternative videoplay or jump? it has multiple comma-separate numbers following it (instead of a single number for the previously discussed instructions). maybe a sequence of videos or a random jump?
+- `?g` - appears 50 times, could also be an alternative videoplay or jump? it has multiple comma-separate numbers following it. maybe a sequence of videos or a random jump?
+
 
 ### Media Files
 
@@ -80,4 +142,4 @@ TBC
 ## Additional Tools Used:
 
 - [Ghidra](https://ghidra-sre.org/) to browse the resources and poke around a bit - didn't decompile anything really.
-- [windows95 in Electron](https://github.com/felixrieseberg/windows95/) to play the game a bit (couldn't be bothered to setup a proper emulator/virtualization).
+- [UTM](https://github.com/utmapp/UTM) to emulate a PC from the era and run Windows 98 (couldn't get Windows 95 running)
