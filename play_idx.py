@@ -58,7 +58,7 @@ def play_audio(idx):
     duration = end_sec-start_sec
     seek = "%.2f" % start_sec
     duration_str = "%.2f" % duration
-    run(['ffplay', '-hide_banner', '-loglevel', 'warning',
+    run(['ffplay', '-hide_banner', '-loglevel', 'warning', '-nodisp',
         '-autoexit', '-i', file, '-ss', seek, '-t', duration_str])
     return
 
@@ -71,10 +71,10 @@ def play_video(idx):
         end = part["end"]
         with open(file, 'rb') as fin:
             fin.seek(start)
-    
-            run(['ffplay', '-hide_banner', '-vf', 'scale=-1:480', 
-                 #'-vf','setpts=0.25*PTS','-af','atempo=4',        # for speedup; 
-                '-loglevel','warning', '-autoexit', '-'], input=fin.read(end - start))
+
+            run(['ffplay', '-hide_banner', '-vf', 'scale=-1:480',
+                 # '-vf','setpts=0.25*PTS','-af','atempo=4',        # for speedup;
+                '-loglevel', 'warning', '-autoexit', '-'], input=fin.read(end - start))
     else:
         print("WARNING: Video not found %i" % idx)
     return

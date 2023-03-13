@@ -3,8 +3,8 @@ import sys
 import nefile
 import random
 from play_idx import play_audio, play_video
-SKIP = -1
-CONTINUE = 0
+CONTINUE = -1
+AUTOPLAY = False
 
 
 class bcolors:
@@ -51,15 +51,15 @@ def executeInstruction(instruction):
         print("<< %s" % instruction_parts[1].strip())
     instruction = instruction_parts[0].strip()
     if (instruction[0:3] == "?r$"):
-        print("DEBUG: Play Video - %s" % instruction)
+        # print("DEBUG: Play Video - %s" % instruction)
         play_video(int(instruction[3:]))
 
     elif (instruction[0:2] == "?j"):
-        print("DEBUG: Play Video - %s" % instruction)
-        play_video(int(instruction[2:]))
-        return SKIP
+        # print("DEBUG: Jump - %s" % instruction)
+        return int(instruction[2:])
     else:
-        print("WARNING: Unsupported command - %s" % instruction)
+        print(bcolors.BOLD+"Warning command: " +
+              bcolors.OKBLUE+"%s" % instruction + bcolors.ENDC)
 
     return CONTINUE
 
@@ -70,8 +70,9 @@ def playSequence(sequence):
         instruction = instruction.strip()
         if (len(instruction) > 0):
             ret = executeInstruction(instruction)
-            if (ret == SKIP):
-                return
+            if (ret != CONTINUE):
+                return ret
+    return CONTINUE
 
 
 def runExchange(exchange):
@@ -84,14 +85,18 @@ def runExchange(exchange):
         elif (line[0] == ">"):
             options[lastOption].append(line)
         else:
-            print("ASSSD %s" % line)
+            print("WARNING WRONG EXCHANGE: %s" % line)
     for idx, key in enumerate(options.keys()):
-        print("Keys: %i. %s" % (idx+1, key[7:]))
+        print("%i. %s" % (idx+1, key[7:]))
     choice_idx = -1
     while (choice_idx < 0 or choice_idx > 2):
-        inputstr = input("Your Choice:")
-        if (inputstr.isdigit()):
-            choice_idx = int(inputstr)-1
+        if not AUTOPLAY:
+            inputstr = input("Your Choice: ")
+            if (inputstr.isdigit()):
+                choice_idx = int(inputstr)-1
+        else:
+            choice_idx = random.randrange(3)
+            print("Your Choice: %i" % (choice_idx+1))
 
     choice_str = list(options.keys())[choice_idx]
     print(">> %s" % choice_str[7:])
@@ -104,33 +109,32 @@ def runExchange(exchange):
         instruction = instruction.strip()
         if (len(instruction) > 0):
             ret = executeInstruction(instruction)
-            if (ret == SKIP):
-                return SKIP
+            if (ret != CONTINUE):
+                return ret
+    return CONTINUE
 
 
 def playResource(resource):
     lines = split_lines(list(resource))
     exchange = -1
-    skipExchange = False
-    skip = 0
     for scene in lines:
         if (isinstance(scene, str) and scene.startswith("sequence")):
-            skipExchange = False
-            playSequence(scene[8:])
+            ret = playSequence(scene[8:])
+            if (ret != CONTINUE):
+                return ret
         elif isinstance(scene, str) and scene.endswith('EXCHANGE'):
-            if not skipExchange:
-                exchange = int(scene[0:-9])
-            else:
-                print("Skipping exchange" + scene)
-        elif exchange > 0:
+            exchange = int(scene[0:-9])
+        elif exchange > 0 or (isinstance(scene, list) and scene[0][0:1] == "+"):
             ret = runExchange(scene)
-            if (ret == SKIP):
-                skipExchange = True
+            if (ret != CONTINUE):
+                return ret
             exchange = -1
 
-        elif not skipExchange:
-            print(bcolors.BOLD+"UNSUPPORTED SCENE: " +
+        else:
+            print(bcolors.BOLD+"Warning Unsupported Scene: " +
                   bcolors.OKBLUE+json.dumps(scene) + bcolors.ENDC)
+    return CONTINUE
+
 
 steel = nefile.NE('/Volumes/Untitled/STEEL.EXE')
 data_resources = steel.resource_table.resources["DATA"]
@@ -140,8 +144,26 @@ for resource_id, resource in data_resources.items():
         "ascii").rstrip("\x1a \x00")  # there's padding
     scenes[resource_id] = data_str
 
+
+resource_ids = list(scenes.keys())
+idx = 0
+sceneId = resource_ids[idx]
 if (len(sys.argv) >= 2 and sys.argv[1].isdigit()):
-    scenes = scenes[int(sys.argv[1]):]  # jump forward to this scene/resource
-for resource_id in scenes:
-    scene = scenes[resource_id]
-    jump = playResource(scene)
+    sceneId = int(sys.argv[1])  # jump forward to this scene/resource
+    idx = resource_ids.index(sceneId)
+
+if (len(sys.argv) >= 2 and "auto" in sys.argv):
+    AUTOPLAY = True
+
+while True:
+    ret = playResource(scenes[sceneId])
+    if (ret != CONTINUE):
+        sceneId = ret
+        idx = resource_ids.index(sceneId)
+    else:
+        idx += 1
+        if (idx < len(resource_ids)):
+            resource_ids[idx]
+        else:
+            print("Congratulations - you finished the Game!")
+            break
