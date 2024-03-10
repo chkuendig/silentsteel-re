@@ -2,7 +2,9 @@ import json
 import sys
 import nefile
 import random
+import os
 from play_idx import play_audio, play_video
+
 CONTINUE = -1
 AUTOPLAY = False
 
@@ -19,7 +21,10 @@ class bcolors:
     UNDERLINE = '\033[4m'
 
 
-folder = "/Volumes/Untitled/"
+if len(sys.argv) >= 2 and os.path.isdir(sys.argv[1]):
+    folder = sys.argv[1]
+else:
+    folder = "/Volumes/Untitled/"
 
 
 def split_lines(data):
@@ -136,7 +141,7 @@ def playResource(resource):
     return CONTINUE
 
 
-steel = nefile.NE('/Volumes/Untitled/STEEL.EXE')
+steel = nefile.NE(folder + "/STEEL.EXE")
 data_resources = steel.resource_table.resources["DATA"]
 scenes = {}
 for resource_id, resource in data_resources.items():

@@ -2,7 +2,12 @@ import struct
 import sys
 import wave
 from subprocess import run
-folder = "/Volumes/Untitled/"
+import os
+
+if len(sys.argv) >= 2 and os.path.isdir(sys.argv[1]):
+    folder = sys.argv[1]
+else:
+    folder = "/Volumes/Untitled/"
 
 
 def parseIdx(filename):
@@ -37,15 +42,15 @@ def parseIdx(filename):
 
 
 audio_params = None
-with wave.open(folder+"SOUNDS1.WAV", 'rb') as wav:
+with wave.open(folder + "/SOUNDS1.WAV", "rb") as wav:
     audio_params = wav.getparams()
 
-video_parts = parseIdx(folder+"VIDEO1.IDX")
-sound_parts = parseIdx(folder+"SOUNDS1.IDX")
+video_parts = parseIdx(folder + "/VIDEO1.IDX")
+sound_parts = parseIdx(folder + "/SOUNDS1.IDX")
 
 
 def play_audio(idx):
-    file = folder+"SOUNDS1.WAV"
+    file = folder + "/SOUNDS1.WAV"
     part = sound_parts[idx]
     start = part["start"]
     end = part["end"]
@@ -64,7 +69,7 @@ def play_audio(idx):
 
 
 def play_video(idx):
-    file = folder+"VIDEO1.MPG"
+    file = folder + "/VIDEO1.MPG"
     if (idx in video_parts):
         part = video_parts[idx]
         start = part["start"]
